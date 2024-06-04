@@ -1,6 +1,5 @@
 package com.example.xemtruyen.reponses.user;
 
-import com.example.xemtruyen.models.Role;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -23,6 +22,4 @@ public class UserResponse {
 
     @JsonProperty("is_active")
     private boolean isActive;
-
-    private Role role;
 }
