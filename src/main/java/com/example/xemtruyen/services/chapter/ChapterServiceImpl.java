@@ -2,6 +2,7 @@ package com.example.xemtruyen.services.chapter;
 
 import com.example.xemtruyen.dtos.ChapterDTO;
 import com.example.xemtruyen.dtos.ChapterImageDTO;
+import com.example.xemtruyen.exceptions.BadRequestException;
 import com.example.xemtruyen.exceptions.ConflictException;
 import com.example.xemtruyen.exceptions.DataNotFoundException;
 import com.example.xemtruyen.models.Chapter;
@@ -17,6 +18,7 @@ import com.example.xemtruyen.utils.FileUtils;
 import com.example.xemtruyen.utils.MapperUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -39,6 +41,8 @@ public class ChapterServiceImpl implements ChapterService {
     private final StoryRepository storyRepository;
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public ChapterResponse create(ChapterDTO chapterDTO) {
         existsByChapterNumber(chapterDTO.getChapterNumber());
         Story story = storyRepository.findById(chapterDTO.getStoryId())
@@ -53,6 +57,7 @@ public class ChapterServiceImpl implements ChapterService {
 
     @Override
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public ChapterResponse update(Long id, ChapterDTO chapterDTO) {
         Chapter chapter = findById(id);
         existsByChapterNumber(chapterDTO.getChapterNumber());
@@ -71,13 +76,14 @@ public class ChapterServiceImpl implements ChapterService {
     }
 
     @Override
-    public ChapterResponse detail(Long id) {
+    public ChapterResponse details(Long id) {
         Chapter chapter = findById(id);
         return MapperUtil.toResponse(chapter, ChapterResponse.class);
     }
 
     @Override
     @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Long id) {
         deleteFromStorage(id);
         chapterRepository.deleteById(id);
@@ -85,7 +91,7 @@ public class ChapterServiceImpl implements ChapterService {
 
     private void existsByChapterNumber(int number) {
         if (chapterRepository.existsChapterByChapterNumber(number)) {
-            throw new ConflictException("Chapter already exists with number = " + number);
+            throw new BadRequestException("Chapter already exists with number = " + number);
         }
     }
 

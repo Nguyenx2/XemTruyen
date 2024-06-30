@@ -13,6 +13,6 @@ public interface ChapterService {
     ChapterResponse update(Long id, ChapterDTO chapterDTO);
 
     ChapterPageResponse list();
-    ChapterResponse detail(Long id);
+    ChapterResponse details(Long id);
     void delete(Long id);
 }

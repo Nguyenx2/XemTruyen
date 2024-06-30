@@ -1,13 +1,10 @@
 package com.example.xemtruyen.models;
 
-import com.example.xemtruyen.models.bases.BaseEntityWithUpdate;
-import com.fasterxml.jackson.annotation.JsonBackReference;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.example.xemtruyen.models.bases.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -18,7 +15,7 @@ import java.util.Set;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Story extends BaseEntityWithUpdate {
+public class Story extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "story_id")
@@ -43,4 +40,10 @@ public class Story extends BaseEntityWithUpdate {
             inverseJoinColumns = @JoinColumn(name = "genre_id"))
     @JsonManagedReference
     private Set<Genre> genres;
+
+    @OneToMany(mappedBy = "story", cascade = CascadeType.ALL)
+    @JsonManagedReference
+    private List<Chapter> chapters;
+
+
 }

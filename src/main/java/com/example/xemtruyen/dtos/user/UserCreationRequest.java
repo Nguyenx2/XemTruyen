@@ -1,4 +1,4 @@
-package com.example.xemtruyen.dtos;
+package com.example.xemtruyen.dtos.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotBlank;
@@ -18,10 +18,10 @@ public class UserCreationRequest {
     @Size(min = 6, message = "The password must have at least 6 characters")
     private String password;
 
+    @JsonProperty("retype_password")
+    private String retypePassword;
+
     @NotBlank
     @JsonProperty("full_name")
     private String fullName;
-
-    @JsonProperty("is_active")
-    private boolean isActive;
 }

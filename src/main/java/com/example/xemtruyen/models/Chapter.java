@@ -1,6 +1,6 @@
 package com.example.xemtruyen.models;
 
-import com.example.xemtruyen.models.bases.BaseEntityWithUpdate;
+import com.example.xemtruyen.models.bases.BaseEntity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
@@ -16,7 +16,7 @@ import java.util.List;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class Chapter extends BaseEntityWithUpdate {
+public class Chapter extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "chapter_id")
@@ -33,5 +33,7 @@ public class Chapter extends BaseEntityWithUpdate {
     @JsonManagedReference
     private List<ChapterImage> chapterImages;
 
-
+    @OneToMany(mappedBy = "chapter", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference
+    private List<Comment> comments;
 }

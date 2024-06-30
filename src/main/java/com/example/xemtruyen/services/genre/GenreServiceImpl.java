@@ -1,19 +1,20 @@
 package com.example.xemtruyen.services.genre;
 
 import com.example.xemtruyen.dtos.GenreDTO;
-import com.example.xemtruyen.models.Author;
+import com.example.xemtruyen.exceptions.BadRequestException;
+import com.example.xemtruyen.exceptions.DataNotFoundException;
 import com.example.xemtruyen.models.Genre;
 import com.example.xemtruyen.models.Story;
-import com.example.xemtruyen.reponses.author.AuthorResponse;
 import com.example.xemtruyen.reponses.genre.GenrePageResponse;
 import com.example.xemtruyen.reponses.genre.GenreResponse;
 import com.example.xemtruyen.repositories.GenreRepository;
 import com.example.xemtruyen.repositories.StoryRepository;
 import com.example.xemtruyen.utils.MapperUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,6 +26,8 @@ public class GenreServiceImpl implements GenreService {
     private final StoryRepository storyRepository;
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public GenreResponse create(GenreDTO genreDTO) {
         existsByName(genreDTO.getName());
         Genre genre = new Genre();
@@ -42,12 +45,14 @@ public class GenreServiceImpl implements GenreService {
     }
 
     @Override
-    public GenreResponse detail(Long id) {
+    public GenreResponse details(Long id) {
         Genre genre = findById(id);
         return MapperUtil.toResponse(genre, GenreResponse.class);
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public GenreResponse update(Long id, GenreDTO genreDTO) {
         Genre genre = findById(id);
         updateGenreFields(
@@ -59,6 +64,8 @@ public class GenreServiceImpl implements GenreService {
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(long id) {
         Genre genre = findById(id);
         List<Story> stories = storyRepository.findStoriesByGenresContains(genre);
@@ -81,13 +88,14 @@ public class GenreServiceImpl implements GenreService {
             genre.setDescription(genreDescription);
         }
     }
+
     private void existsByName(String name) {
         if (genreRepository.existsByName(name))
-            throw new RuntimeException();
+            throw new BadRequestException("Genre already exists with name = " + name);
     }
 
     private Genre findById(Long id) {
         return genreRepository.findById(id)
-                .orElseThrow(()->new RuntimeException());
+                .orElseThrow(() -> new DataNotFoundException("Cannot find genre with id = " + id));
     }
 }

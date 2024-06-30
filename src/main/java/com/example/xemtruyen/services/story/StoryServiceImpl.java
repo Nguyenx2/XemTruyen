@@ -17,15 +17,16 @@ import com.example.xemtruyen.repositories.StoryRepository;
 import com.example.xemtruyen.utils.ConvertUtils;
 import com.example.xemtruyen.utils.FileUtils;
 import com.example.xemtruyen.utils.MapperUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.modelmapper.ModelMapper;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -38,7 +39,10 @@ public class StoryServiceImpl implements StoryService {
     private final StoryRepository storyRepository;
     private final GenreRepository genreRepository;
     private final AuthorRepository authorRepository;
+
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public StoryResponse create(StoryDTO storyDTO) {
         existsByStoryTitle(storyDTO.getTitle());
         Author existingAuthor = authorRepository.findById(storyDTO.getAuthorId())
@@ -61,20 +65,22 @@ public class StoryServiceImpl implements StoryService {
     }
 
     @Override
-    public StoryPageResponse list(String keyword, Long genreId, int size, int page) {
+    public StoryPageResponse list(String keyword, Long genreId, Long authorId, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
-        List<Story> stories = storyRepository.search(keyword, pageable);
+        List<Story> stories = storyRepository.search(keyword, genreId, authorId, pageable);
         List<StoryResponse> storyResponses = MapperUtil.toDTOS(stories, StoryResponse.class);
         return StoryPageResponse.of(storyResponses, storyResponses.size());
     }
 
     @Override
-    public StoryResponse detail(Long id) {
+    public StoryResponse details(Long id) {
         Story story = findById(id);
         return MapperUtil.toResponse(story, StoryResponse.class);
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public StoryResponse update(Long id, StoryDTO storyDTO) {
         Story story = findById(id);
         updateStoryFields(
@@ -90,6 +96,8 @@ public class StoryServiceImpl implements StoryService {
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Long id) {
         deleteFromStorage(id);
         Story story = findById(id);
@@ -134,6 +142,7 @@ public class StoryServiceImpl implements StoryService {
             throw new InternalServerError(e.getMessage());
         }
     }
+
     private void existsByStoryTitle(String name) {
         if (storyRepository.existsStoriesByTitle(name)) {
             throw new RuntimeException();
@@ -183,7 +192,11 @@ public class StoryServiceImpl implements StoryService {
         Story story = findById(id);
         String storyName = ConvertUtils.convertToSlug(story.getTitle());
         String folderPath = "uploads/" + storyName;
-        FileUtils.deleteFile(story.getCoverImageUrl());
-        FileUtils.deleteFolder(folderPath);
+        try {
+            FileUtils.deleteFile(story.getCoverImageUrl());
+            FileUtils.deleteFolder(folderPath);
+        } catch (Exception e) {
+            throw new ConflictException(e.getMessage());
+        }
     }
 }

@@ -1,84 +1,103 @@
 package com.example.xemtruyen.services.auth;
 
 import com.example.xemtruyen.dtos.auth.AuthenticationDTO;
-import com.example.xemtruyen.dtos.auth.IntrospectRequest;
+import com.example.xemtruyen.dtos.user.UserCreationRequest;
 import com.example.xemtruyen.exceptions.BadRequestException;
+import com.example.xemtruyen.exceptions.DataNotFoundException;
+import com.example.xemtruyen.models.Role;
+import com.example.xemtruyen.models.Token;
+import com.example.xemtruyen.models.TokenType;
 import com.example.xemtruyen.models.User;
 import com.example.xemtruyen.reponses.auth.AuthenticationResponse;
-import com.example.xemtruyen.reponses.auth.IntrospectResponse;
+import com.example.xemtruyen.repositories.RoleRepository;
+import com.example.xemtruyen.repositories.TokenRepository;
 import com.example.xemtruyen.repositories.UserRepository;
-import com.nimbusds.jose.*;
-import com.nimbusds.jose.crypto.MACSigner;
-import com.nimbusds.jose.crypto.MACVerifier;
-import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
 
-import java.text.ParseException;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.Date;
+import static com.example.xemtruyen.models.Role.USER;
+import static com.example.xemtruyen.utils.ValidationUtils.isValidEmail;
 
 @Service
 @RequiredArgsConstructor
 public class AuthenticationServiceImpl implements AuthenticationService {
+    private final JwtService jwtService;
+    private final AuthenticationManager authenticationManager;
     private final UserRepository userRepository;
+    private final RoleRepository roleRepository;
+    private final TokenRepository tokenRepository;
 
-    protected static final String SIGNER_KEY =
-            "i6Q9M2TJUr1rUc4KLzwtuT4kaVqSdz+iVVwU6HyjesbJa+xsLw2k+jEDVPW4Z5ek\n";
     @Override
+
     public AuthenticationResponse authenticate(AuthenticationDTO request) {
-        User user = userRepository.findUserByEmail(request.getEmail());
-        PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(10);
-        boolean authenticated = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                        request.getEmail(),
+                        request.getPassword()
+                )
+        );
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new DataNotFoundException("Cannot find user with email = " + request.getEmail()));
 
-        if (!authenticated) {
-            throw new BadRequestException("Invalid");
-        }
+        String jwtToken = jwtService.generateToken(user);
 
-        String token = generateToken(request.getEmail());
-        return AuthenticationResponse.of(token, true);
+        revokedAllUserTokens(user);
+        saveUserToken(user, jwtToken);
+
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .build();
     }
 
     @Override
-    public IntrospectResponse introspect(IntrospectRequest introspect) throws JOSEException, ParseException {
-        String token = introspect.getToken();
-
-        JWSVerifier jwsVerifier = new MACVerifier(SIGNER_KEY.getBytes());
-
-        SignedJWT signedJWT = SignedJWT.parse(token);
-
-        Date expityTime = signedJWT.getJWTClaimsSet().getExpirationTime();
-        var verified = signedJWT.verify(jwsVerifier);
-
-        return IntrospectResponse.of(verified && expityTime.after(new Date()));
+    public AuthenticationResponse register(UserCreationRequest request) {
+        if (userRepository.existsUserByEmail(request.getEmail())) {
+            throw new BadRequestException("User already exists");
+        }
+        if (!request.getPassword().equals(request.getRetypePassword())) {
+            throw new BadRequestException("Password not match");
+        }
+        if (!isValidEmail(request.getEmail())) {
+            throw new BadRequestException("Invalid email");
+        }
+        Role role = roleRepository.findRoleByName(USER);
+        User user = User.builder()
+                .email(request.getEmail())
+                .fullName(request.getFullName())
+                .password(request.getPassword())
+                .role(role)
+                .isActive(true)
+                .build();
+        userRepository.save(user);
+        var jwtToken = jwtService.generateToken(user);
+        saveUserToken(user, jwtToken);
+        return AuthenticationResponse.builder()
+                .accessToken(jwtToken)
+                .build();
     }
 
-    private String generateToken(String email) {
-        JWSHeader header = new JWSHeader(JWSAlgorithm.HS256);
+    private void revokedAllUserTokens(User user) {
+        var validUserTokens = tokenRepository.findAllValidTokensByUser(user.getUserId());
+        if (validUserTokens.isEmpty())
+            return;
+        validUserTokens.forEach(t -> {
+            t.setExpired(true);
+            t.setRevoked(true);
+        });
 
-        JWTClaimsSet jwtClaimsSet = new JWTClaimsSet.Builder()
-                .subject(email)
-                .issuer("xemtruyen.com")
-                .issueTime(new Date())
-                .expirationTime(new Date(
-                        Instant.now().plus(1, ChronoUnit.HOURS).toEpochMilli()
-                ))
-                .claim("customClaim", "Custom")
+        tokenRepository.saveAll(validUserTokens);
+    }
+
+    private void saveUserToken(User user, String jwtToken) {
+        var token = Token.builder()
+                .user(user)
+                .token(jwtToken)
+                .tokenType(TokenType.BEARER)
+                .revoked(false)
+                .expired(false)
                 .build();
-
-        Payload payload = new Payload(jwtClaimsSet.toJSONObject());
-
-        JWSObject jwsObject = new JWSObject(header, payload);
-
-        try {
-            jwsObject.sign(new MACSigner(SIGNER_KEY.getBytes()));
-            return jwsObject.serialize();
-        } catch (JOSEException e) {
-            throw new RuntimeException(e);
-        }
+        tokenRepository.save(token);
     }
 }

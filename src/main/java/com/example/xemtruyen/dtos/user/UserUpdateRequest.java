@@ -1,6 +1,7 @@
-package com.example.xemtruyen.reponses.user;
+package com.example.xemtruyen.dtos.user;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,15 +11,7 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-public class UserResponse {
-    @JsonProperty("user_id")
-    private Long userId;
-
-    private String email;
-
+public class UserUpdateRequest {
     @JsonProperty("full_name")
     private String fullName;
-
-    @JsonProperty("is_active")
-    private boolean isActive;
 }

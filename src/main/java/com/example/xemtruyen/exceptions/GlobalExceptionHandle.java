@@ -15,7 +15,10 @@ public class GlobalExceptionHandle {
     ) {
         return ResponseEntity.status(exception.getCode())
                 .body(
-                    ApiResponse.of(exception.getCode(), exception.getMessage(), null)
+                        ApiResponse.builder()
+                                .code(exception.getCode())
+                                .message(exception.getMessage())
+                                .build()
                 );
     }
 
@@ -29,7 +32,10 @@ public class GlobalExceptionHandle {
                 .orElse(exception.getMessage());
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(
-                        ApiResponse.of(HttpStatus.BAD_REQUEST.value(), errorMessage, null)
+                        ApiResponse.builder()
+                                .code(HttpStatus.BAD_REQUEST.value())
+                                .message(errorMessage)
+                                .build()
                 );
     }
 }

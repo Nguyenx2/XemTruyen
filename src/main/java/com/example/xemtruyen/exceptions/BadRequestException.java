@@ -4,7 +4,7 @@ import com.example.xemtruyen.constant.Constant;
 
 public class BadRequestException extends BaseException {
     public BadRequestException(String message) {
-        setCode(Constant.CodeException.BAD_REQUEST);
+        setCode(Constant.CodeValue.BAD_REQUEST);
         setMessage(message);
     }
 }

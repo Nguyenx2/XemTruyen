@@ -1,19 +1,17 @@
 package com.example.xemtruyen.controllers;
 
-import com.example.xemtruyen.constant.Constant;
 import com.example.xemtruyen.dtos.AuthorDTO;
 import com.example.xemtruyen.reponses.ApiResponse;
 import com.example.xemtruyen.reponses.author.AuthorPageResponse;
 import com.example.xemtruyen.reponses.author.AuthorResponse;
 import com.example.xemtruyen.services.author.AuthorService;
+import com.example.xemtruyen.services.message.MessageService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 
-import static com.example.xemtruyen.constant.Constant.CommonConstants.SUCCESS;
+import static com.example.xemtruyen.constant.Constant.CodeValue.SUCCESS;
+import static com.example.xemtruyen.constant.Constant.CommonConstants.*;
 import static com.example.xemtruyen.constant.Constant.MessageException.CREATE_AUTHOR_SUCCESS;
 import static com.example.xemtruyen.constant.Constant.MessageException.UPDATE_AUTHOR_SUCCESS;
 
@@ -21,53 +19,68 @@ import static com.example.xemtruyen.constant.Constant.MessageException.UPDATE_AU
 @RequestMapping("${api.prefix}/authors")
 @RequiredArgsConstructor
 public class AuthorController {
+
     private final AuthorService authorService;
+    private final MessageService messageService;
+
     @GetMapping("")
     ApiResponse<AuthorPageResponse> list(
-        @RequestParam(name = "keyword", defaultValue = "", required = false) String keyword,
-        @RequestParam(name = "page", defaultValue = "0") int page,
-        @RequestParam(name = "size", defaultValue = "10") int size
+            @RequestParam(name = "keyword", defaultValue = "", required = false) String keyword,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "10") int size,
+            @RequestHeader(name = LANGUAGE, defaultValue = DEFAULT_LANGUAGE) String language
     ) {
-        return ApiResponse.ofSuccess(
-                SUCCESS,
-                authorService.list(keyword, page, size)
-        );
+        return ApiResponse.<AuthorPageResponse>builder()
+                .code(SUCCESS)
+                .message(messageService.getMessage(SUCCESSFULLY, language))
+                .data(authorService.list(keyword, page, size))
+                .build();
     }
 
-    @GetMapping("/detail/{id}")
-    ApiResponse<AuthorResponse> detail(@PathVariable Long id) {
-        return ApiResponse.ofSuccess(
-                SUCCESS,
-                authorService.detail(id)
-        );
+    @GetMapping("/details/{id}")
+    ApiResponse<AuthorResponse> details(
+            @PathVariable Long id,
+            @RequestHeader(name = LANGUAGE, defaultValue = DEFAULT_LANGUAGE) String language) {
+        return ApiResponse.<AuthorResponse>builder()
+                .code(SUCCESS)
+                .message(messageService.getMessage(SUCCESSFULLY, language))
+                .data(authorService.details(id))
+                .build();
     }
 
     @PostMapping("")
     ApiResponse<AuthorResponse> create(
-            @Valid @RequestBody AuthorDTO authorDTO) {
-        return ApiResponse.ofCreated(
-                CREATE_AUTHOR_SUCCESS,
-                authorService.create(authorDTO)
-        );
+            @Valid @RequestBody AuthorDTO authorDTO,
+            @RequestHeader(name = LANGUAGE, defaultValue = DEFAULT_LANGUAGE) String language) {
+        return ApiResponse.<AuthorResponse>builder()
+                .code(SUCCESS)
+                .message(messageService.getMessage(CREATE_AUTHOR_SUCCESS, language))
+                .data(authorService.create(authorDTO))
+                .build();
     }
 
     @PutMapping("/{id}")
     ApiResponse<AuthorResponse> update(
             @PathVariable Long id,
-            @Valid @RequestBody AuthorDTO authorDTO
+            @Valid @RequestBody AuthorDTO authorDTO,
+            @RequestHeader(name = LANGUAGE, defaultValue = DEFAULT_LANGUAGE) String language
     ) {
-        return ApiResponse.ofCreated(
-                UPDATE_AUTHOR_SUCCESS,
-                authorService.update(id, authorDTO)
-        );
+        return ApiResponse.<AuthorResponse>builder()
+                .code(SUCCESS)
+                .message(messageService.getMessage(UPDATE_AUTHOR_SUCCESS, language))
+                .data(authorService.update(id, authorDTO))
+                .build();
     }
 
     @DeleteMapping("/{id}")
-    ApiResponse<Void> detele(@PathVariable Long id) {
+    ApiResponse<Void> detele(
+            @PathVariable Long id,
+            @RequestHeader(name = LANGUAGE, defaultValue = DEFAULT_LANGUAGE) String language) {
         authorService.delete(id);
-        return ApiResponse.ofSuccess(
-                SUCCESS, null
-        );
+        return ApiResponse.<Void>builder()
+                .code(SUCCESS)
+                .message(messageService.getMessage(SUCCESSFULLY, language))
+                .build();
     }
 
 }

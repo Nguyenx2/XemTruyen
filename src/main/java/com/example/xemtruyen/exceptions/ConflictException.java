@@ -4,7 +4,7 @@ import com.example.xemtruyen.constant.Constant;
 
 public class ConflictException extends BaseException {
     public ConflictException(String message) {
-        setCode(Constant.CodeException.CONFLICT);
+        setCode(Constant.CodeValue.CONFLICT);
         setMessage(message);
     }
 }

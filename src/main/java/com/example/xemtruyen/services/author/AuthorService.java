@@ -10,7 +10,7 @@ public interface AuthorService {
     AuthorResponse create(AuthorDTO authorDTO);
 
     AuthorResponse update(Long id, AuthorDTO authorDTO);
-    AuthorResponse detail(Long id);
+    AuthorResponse details(Long id);
     void delete(Long id);
 
 }

@@ -10,9 +10,11 @@ import com.example.xemtruyen.reponses.author.AuthorResponse;
 import com.example.xemtruyen.repositories.AuthorRepository;
 import com.example.xemtruyen.services.author.AuthorService;
 import com.example.xemtruyen.utils.MapperUtil;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -22,6 +24,7 @@ import java.util.List;
 public class AuthorServiceImpl implements AuthorService {
     private final AuthorRepository authorRepository;
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public AuthorPageResponse list(
             String keyword,
             int page,
@@ -34,6 +37,8 @@ public class AuthorServiceImpl implements AuthorService {
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public AuthorResponse create(AuthorDTO authorDTO) {
         existsByName(authorDTO.getAuthorName());
         Author newAuthor = MapperUtil.toModel(authorDTO, Author.class);
@@ -41,6 +46,8 @@ public class AuthorServiceImpl implements AuthorService {
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public AuthorResponse update(Long id, AuthorDTO authorDTO) {
         Author author = findById(id);
         updateAuthorField(
@@ -51,12 +58,14 @@ public class AuthorServiceImpl implements AuthorService {
     }
 
     @Override
-    public AuthorResponse detail(Long id) {
+    public AuthorResponse details(Long id) {
         Author author = findById(id);
         return MapperUtil.toResponse(author, AuthorResponse.class);
     }
 
     @Override
+    @Transactional
+    @PreAuthorize("hasRole('ADMIN')")
     public void delete(Long id) {
         authorRepository.deleteById(id);
     }

@@ -1,15 +1,17 @@
 package com.example.xemtruyen.services.chapter.image;
 
 import com.example.xemtruyen.dtos.ChapterImageDTO;
+import com.example.xemtruyen.exceptions.BadRequestException;
+import com.example.xemtruyen.exceptions.DataNotFoundException;
 import com.example.xemtruyen.models.Chapter;
 import com.example.xemtruyen.models.ChapterImage;
 import com.example.xemtruyen.repositories.ChapterImageRepository;
 import com.example.xemtruyen.repositories.ChapterRepository;
 import com.example.xemtruyen.utils.ConvertUtils;
-import com.example.xemtruyen.utils.FileUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,11 +31,13 @@ public class ChapterImageServiceImpl implements ChapterImageService {
     private final ChapterImageRepository chapterImageRepository;
     private final ChapterRepository chapterRepository;
     private static final String UPLOAD_DIR = "uploads/";
-    private static final String NOT_FOUND_IMAGE = "";
+    private static final String NOT_FOUND_IMAGE = "notfound.jpg";
+
     @Override
-    public Resource get(String storyTitle, String chapterNumber, String imageName) {
+    public Resource get(Long chapterId, String imageName) {
         try {
-            Path imagePath = Paths.get(UPLOAD_DIR + storyTitle + "/" + chapterNumber + "/" + imageName);
+            Chapter chapter = findChapterById(chapterId);
+            Path imagePath = Paths.get(UPLOAD_DIR + chapter.getStory().getTitle() + "/" + chapter.getChapterNumber() + "/" + imageName);
             Resource resource = new UrlResource(imagePath.toUri());
 
             if (resource.exists() && resource.isReadable()) {
@@ -48,6 +52,7 @@ public class ChapterImageServiceImpl implements ChapterImageService {
     }
 
     @Override
+    @PreAuthorize("hasRole('ADMIN')")
     public List<ChapterImage> uploadChapterImages(Long chapterId, List<MultipartFile> files) {
         files = files == null ? new ArrayList<>() : files;
         List<ChapterImage> chapterImages = new ArrayList<>();
@@ -56,10 +61,10 @@ public class ChapterImageServiceImpl implements ChapterImageService {
                 continue;
             }
             if (file.getSize() > 10 * 1024 * 1024) {
-                throw new RuntimeException();
+                throw new BadRequestException("File size must be less than 10MB");
             }
             if (isImageFile(file)) {
-                throw new RuntimeException();
+                throw new BadRequestException("File must be an image");
             }
             Chapter chapter = findChapterById(chapterId);
             String fileName = storeFile(chapter, file);
@@ -71,19 +76,6 @@ public class ChapterImageServiceImpl implements ChapterImageService {
             chapterImages.add(chapterImage);
         }
         return chapterImages;
-    }
-
-    @Override
-    public ChapterImage updateChapterImage(Long id, MultipartFile file) {
-        ChapterImage chapterImage = findById(id);
-        Chapter chapter = chapterImage.getChapter();
-        deleteOldFileFromStorage(chapterImage);
-        if (isImageFile(file)) {
-            throw new RuntimeException();
-        }
-        String fileName = storeFile(chapter, file);
-        chapterImage.setImageUrl(fileName);
-        return chapterImageRepository.save(chapterImage);
     }
 
     private boolean isImageFile(MultipartFile file) {
@@ -121,17 +113,9 @@ public class ChapterImageServiceImpl implements ChapterImageService {
         return chapterImageRepository.save(chapterImage);
     }
 
-    private void deleteOldFileFromStorage(ChapterImage chapterImage) {
-        FileUtils.deleteFile(chapterImage.getImageUrl());
-    }
-
-    private ChapterImage findById(Long id) {
-        return chapterImageRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException());
-    }
 
     private Chapter findChapterById(Long chapterId) {
         return chapterRepository.findById(chapterId)
-                .orElseThrow(() -> new RuntimeException());
+                .orElseThrow(() -> new DataNotFoundException("Cannot find chapter with id = " + chapterId));
     }
 }
