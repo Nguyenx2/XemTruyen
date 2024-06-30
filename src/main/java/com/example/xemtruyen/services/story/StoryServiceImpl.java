@@ -173,6 +173,8 @@ public class StoryServiceImpl implements StoryService {
             story.setStatus(status);
         }
         if (file != null && isImageFile(file)) {
+            String oldCoverImageUrl = story.getCoverImageUrl();
+            FileUtils.deleteFile(oldCoverImageUrl);
             String coverImageUrl = storeFile(file);
             story.setCoverImageUrl(coverImageUrl);
         }
